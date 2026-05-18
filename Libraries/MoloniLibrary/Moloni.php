@@ -79,6 +79,10 @@ class Moloni implements MoloniApiRepositoryInterface
     protected $taxExemptions;
     protected $deliveryMethods;
     protected $paymentMethods;
+    protected $documents;
+    protected $productsCategories;
+    protected $customers;
+    protected $products;
 
     /*
      * 'Required' means its not set and must be sent to the settings page
