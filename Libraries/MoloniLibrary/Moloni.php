@@ -1,9 +1,6 @@
 <?php
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
+declare(strict_types=1);
 
 namespace Invoicing\Moloni\Libraries\MoloniLibrary;
 
@@ -61,33 +58,54 @@ class Moloni implements MoloniApiRepositoryInterface
 {
     public const API_URL = 'https://api.moloni.pt/v1/';
 
-    public $logs = [];
-    public $errors;
-    public $curl;
-    public $tokensRepository;
-    public $settingsRepository;
-    public $request;
-    public $dataPersistor;
-    public $session;
-    private $factories;
-    public $redirectTo;
-    protected $companies;
-    protected $documentSets;
-    protected $countries;
-    protected $measurementUnits;
-    protected $taxes;
-    protected $taxExemptions;
-    protected $deliveryMethods;
-    protected $paymentMethods;
-    protected $documents;
-    protected $productsCategories;
-    protected $customers;
-    protected $products;
+    public array $logs = [];
+
+    private ApiErrors $errors;
+
+    private Curl $curl;
+
+    private TokensRepository $tokensRepository;
+
+    private SettingsRepository $settingsRepository;
+
+    private RequestInterface $request;
+
+    private DataPersistorInterface $dataPersistor;
+
+    private ApiSession $session;
+
+    private array $factories = [];
+
+    public ?string $redirectTo = null;
+
+    protected ?Companies $companies = null;
+
+    protected ?DocumentSets $documentSets = null;
+
+    protected ?Countries $countries = null;
+
+    protected ?MeasurementUnits $measurementUnits = null;
+
+    protected ?ProductsTaxes $taxes = null;
+
+    protected ?ProductsTaxExemptions $taxExemptions = null;
+
+    protected ?DeliveryMethods $deliveryMethods = null;
+
+    protected ?PaymentMethods $paymentMethods = null;
+
+    protected ?Documents $documents = null;
+
+    protected ?ProductsCategories $productsCategories = null;
+
+    protected ?Customers $customers = null;
+
+    protected ?Products $products = null;
 
     /*
      * 'Required' means its not set and must be sent to the settings page
      */
-    public $settings = [
+    public array $settings = [
     'cae' => '',
     'debug_console' => '0',
 
@@ -170,29 +188,33 @@ class Moloni implements MoloniApiRepositoryInterface
         ];
     }
 
-    public function __get($name)
+    public function __get(string $name)
     {
-        if (!isset($this->{$name}) && isset($this->factories[$name]))
+        if (
+        property_exists($this, $name) &&
+        !isset($this->{$name}) &&
+        isset($this->factories[$name])
+        )
         {
             $this->{$name} = $this->factories[$name]->create();
         }
 
-        return $this->{$name};
+        return $this->{$name} ?? null;
     }
 
-    public function __set($name, $value)
+    public function __set(string $name, mixed $value): void
     {
-        $this->$name = $value;
+        if (property_exists($this, $name))
+        {
+            $this->{$name} = $value;
+        }
     }
 
-    public function __isset($name): bool
+    public function __isset(string $name): bool
     {
-        return isset($this->$name);
+        return isset($this->{$name});
     }
 
-    /**
-     * @return ApiSession
-     */
     public function getSession(): ApiSession
     {
         return $this->session;
@@ -201,9 +223,11 @@ class Moloni implements MoloniApiRepositoryInterface
     public function checkActiveSession(): bool
     {
         $activeTokens = $this->tokensRepository->getTokens();
+
         if (!empty($activeTokens->getAccessToken()))
         {
             $setCompanyId = $this->request->getParam('company_id', false);
+
             if ($setCompanyId && $setCompanyId > 0)
             {
                 $activeTokens
@@ -213,7 +237,10 @@ class Moloni implements MoloniApiRepositoryInterface
 
             if ($this->session->isValidSession())
             {
-                if (empty($this->session->companyId) && $this->request->getActionName() !== 'company')
+                if (
+                empty($this->session->companyId) &&
+                $this->request->getActionName() !== 'company'
+                )
                 {
                     $this->redirectTo = 'moloni/home/company/';
                     return false;
@@ -221,84 +248,104 @@ class Moloni implements MoloniApiRepositoryInterface
 
                 try
                 {
-                    $settings = $this->setSettings($this->session->companyId);
+                    $settings = $this->setSettings(
+                        $this->session->companyId
+                    );
                 }
                 catch (JsonException $e)
                 {
                     $settings = [];
                 }
 
-                $this->dataPersistor->set('moloni_settings', $settings);
+                $this->dataPersistor->set(
+                    'moloni_settings',
+                    $settings
+                );
+
                 return true;
             }
         }
 
         $this->redirectTo = 'moloni/home/welcome/';
+
         return false;
     }
 
     public function dropActiveSession(): bool
     {
         $this->redirectTo = 'moloni/home/welcome/';
+
         $activeTokens = $this->tokensRepository->getTokens();
+
         $activeTokens->delete();
-        return false;
-    }
-
-    /**
-     * @param $authorizationCode
-     * @return bool
-     * @throws Exception
-     * @throws Exception
-     * @throws Exception
-     */
-    public function checkAuthorizationCode($authorizationCode): bool
-    {
-        if ($this->session->isValidAuthorizationCode($authorizationCode))
-        {
-            return true;
-        }
 
         return false;
     }
 
     /**
-     * @return bool|string
+     * @throws Exception
      */
-    public function getAuthenticationUrl()
+    public function checkAuthorizationCode(
+        $authorizationCode
+    ): bool {
+        return $this->session
+            ->isValidAuthorizationCode($authorizationCode);
+    }
+
+    public function getAuthenticationUrl(): bool|string
     {
         $tokens = $this->tokensRepository->getTokens();
-        if (!empty($tokens->getDeveloperId()) && !empty($tokens->getRedirectUri()))
+
+        if (
+        !empty($tokens->getDeveloperId()) &&
+        !empty($tokens->getRedirectUri())
+        )
         {
             $loginUrl = self::API_URL . 'authorize/?response_type=code';
-            $loginUrl .= '&client_id=' . $tokens->getDeveloperId();
-            $loginUrl .= '&redirect_uri=' . urlencode($tokens->getRedirectUri());
+
+            $loginUrl .= '&client_id=' .
+                (string)$tokens->getDeveloperId();
+
+            $loginUrl .= '&redirect_uri=' .
+                urlencode((string)$tokens->getRedirectUri());
+
             return $loginUrl;
         }
 
         return false;
     }
 
-    public function execute($url, $body = false)
-    {
+    public function execute(
+        $url,
+        $body = false
+    ) {
         $response = false;
+
         $requestUrl = self::API_URL . $url;
 
         if ($this->session->accessToken)
         {
-            $requestUrl .= '/?human_errors=true&access_token=' . $this->session->accessToken;
+            $requestUrl .=
+                '/?human_errors=true&access_token=' .
+                (string)$this->session->accessToken;
         }
 
         $this->curl->post($requestUrl, $body);
+
         $rawResponse = $this->curl->getBody();
 
         if (!empty($rawResponse))
         {
             try
             {
-                $response = json_decode($rawResponse, true);
+                $response = json_decode(
+                    $rawResponse,
+                    true,
+                    512,
+                    JSON_THROW_ON_ERROR
+                );
             }
-            catch (Exception $e)
+            catch (JsonException $e)
             {
                 $response = [];
             }
@@ -310,46 +357,58 @@ class Moloni implements MoloniApiRepositoryInterface
             'received' => $response
         ];
 
-        $this->dataPersistor->set("moloni_logs", $this->logs);
+        $this->dataPersistor->set(
+            'moloni_logs',
+            $this->logs
+        );
 
         return $response;
     }
 
     /**
-     * @param $companyId
-     * @return array
      * @throws NoSuchEntityException
      */
-    private function setSettings($companyId): array
-    {
+    private function setSettings(
+        $companyId
+    ): array {
         if ($companyId)
         {
-            $savedSettings = $this->settingsRepository->getSettingsByCompany($companyId);
+            $savedSettings = $this->settingsRepository
+                ->getSettingsByCompany($companyId);
+
             if (empty($savedSettings))
             {
-                // If there are no saved settings in the table
                 foreach ($this->settings as $label => $option)
                 {
                     $savedSettings[$label] = $option;
-                    $this->settingsRepository->saveSetting($companyId, $label, $option);
+
+                    $this->settingsRepository->saveSetting(
+                        $companyId,
+                        $label,
+                        $option
+                    );
                 }
             }
             else
             {
-                // If any setting doesn't exist add it to the database
                 foreach ($this->settings as $label => $option)
                 {
                     if (!array_key_exists($label, $savedSettings))
                     {
                         $savedSettings[$label] = $option;
-                        // $this->settingsRepository->saveSetting($companyId, $label, $option);
                     }
                 }
             }
 
-            if (isset($savedSettings['orders_statuses']) && !empty($savedSettings['orders_statuses']))
+            if (
+            isset($savedSettings['orders_statuses']) &&
+            !empty($savedSettings['orders_statuses'])
+            )
             {
-                $savedSettings['orders_statuses'] = json_decode($savedSettings['orders_statuses'], true);
+                $savedSettings['orders_statuses'] = json_decode(
+                    $savedSettings['orders_statuses'],
+                    true
+                );
             }
             else
             {
