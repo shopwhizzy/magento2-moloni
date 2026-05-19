@@ -1,4 +1,9 @@
-# Moloni extension for Magento 2 - BETA
+# Moloni extension for Magento 2
+
+This module adds **Moloni invoicing integration** to Magento 2.
+This fork stablish the **php83+ compatibility** with latest latest magento versions 2.4.7 and forward with the already developed features by the core Moloni.
+
+# Original README content
 
 Tired of manually processing your invoices? 
 With this extension you will be able to: 
@@ -12,7 +17,7 @@ With this extension you will be able to:
 
 Install the extension via composer
 ```
-composer require moloni/magento2
+composer require shopwhizzy/magento2-moloni
 ```
 
 Verify if the extension is installed
@@ -46,7 +51,7 @@ If you want to update the extension you should run the following
 
 Update the composer package
 ```
-composer update moloni/magento2
+composer update shopwhizzy/magento2-moloni
 ```
 
 Upgrade, deploy and clean cache 
