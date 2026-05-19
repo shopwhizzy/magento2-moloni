@@ -1,7 +1,7 @@
 # Moloni extension for Magento 2
 
 This module adds **Moloni invoicing integration** to Magento 2.
-This fork stablish the **php83+ compatibility** with latest latest magento versions 2.4.7 and forward with the already developed features by the core Moloni.
+This fork stablish the **php83+ compatibility** with latest latest magento versions 2.4.7 and forward with the already developed features by the core Moloni team.
 
 # Original README content
 
