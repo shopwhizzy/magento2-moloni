@@ -1,5 +1,5 @@
 {
-    "name": "moloni/magento2",
+    "name": "shopwhizzy/magento2-moloni",
     "description": "Module for Magento 2 by Moloni",
     "type": "magento2-module",
     "version": "1.4.0",
