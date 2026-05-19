@@ -63,8 +63,7 @@ class SettingsRepository implements SettingsRepositoryInterface
         SearchResultsInterfaceFactory $searchResultsFactory,
         SearchCriteriaBuilder $searchCriteriaBuilder,
         LoggerInterface $logger
-    )
-    {
+    ) {
         $this->objectFactory = $objectFactory;
         $this->objectResourceModel = $objectResourceModel;
         $this->collectionFactory = $collectionFactory;
@@ -79,9 +78,12 @@ class SettingsRepository implements SettingsRepositoryInterface
     public function save($model): int
     {
         $this->settingsResults = [];
-        try {
+        try
+        {
             $this->objectResourceModel->save($model);
-        } catch (AlreadyExistsException | Exception $e) {
+        }
+        catch (AlreadyExistsException | Exception $e)
+        {
             $this->logger->critical($e->getMessage());
         }
 
@@ -100,7 +102,8 @@ class SettingsRepository implements SettingsRepositoryInterface
     {
         $obj = $this->getByCompanyLabel($companyId, $label);
 
-        if (is_array($value)) {
+        if (is_array($value))
+        {
             $value = json_encode($value);
         }
 
@@ -122,7 +125,8 @@ class SettingsRepository implements SettingsRepositoryInterface
         $object = $this->objectFactory->create();
         $this->objectResourceModel->load($object, $id);
 
-        if (!$object || !$object->getId()) {
+        if (!$object || !$object->getId())
+        {
             throw new NoSuchEntityException(__('Setting not found'));
         }
 
@@ -135,9 +139,12 @@ class SettingsRepository implements SettingsRepositoryInterface
      */
     public function delete($model): bool
     {
-        try {
+        try
+        {
             $this->objectResourceModel->delete($model);
-        } catch (Exception $exception) {
+        }
+        catch (Exception $exception)
+        {
             throw new CouldNotDeleteException(__($exception->getMessage()));
         }
         return true;
@@ -149,9 +156,12 @@ class SettingsRepository implements SettingsRepositoryInterface
      */
     public function deleteById($id): bool
     {
-        try {
+        try
+        {
             return $this->delete($this->getById($id));
-        } catch (NoSuchEntityException $exception) {
+        }
+        catch (NoSuchEntityException $exception)
+        {
             throw new CouldNotDeleteException(__($exception->getMessage()));
         }
     }
@@ -171,13 +181,17 @@ class SettingsRepository implements SettingsRepositoryInterface
      */
     public function getSettingsByCompany(int $companyId)
     {
-        if (is_array($this->settingsResults)) {
-            if (!isset($this->settingsResults[$companyId])) {
+        if (is_array($this->settingsResults))
+        {
+            if (!isset($this->settingsResults[$companyId]))
+            {
                 $filter = $this->searchCriteriaBuilder->addFilter("company_id", $companyId)->create();
                 $list = $this->getList($filter);
 
-                if ($list->getTotalCount() > 0) {
-                    foreach ($list->getItems() as $option) {
+                if ($list->getTotalCount() > 0)
+                {
+                    foreach ($list->getItems() as $option)
+                    {
                         $this->settingsResults[$companyId][$option['label']] = $option['value'];
                     }
 
@@ -209,7 +223,8 @@ class SettingsRepository implements SettingsRepositoryInterface
 
         $list = $this->getList($_filter);
 
-        if ($list->getTotalCount() > 0) {
+        if ($list->getTotalCount() > 0)
+        {
             $id = (int)$list->getItems()[0]['option_id'];
             return $this->getById($id);
         }
@@ -225,8 +240,10 @@ class SettingsRepository implements SettingsRepositoryInterface
         $searchResults = $this->searchResultsFactory->create();
         $searchResults->setSearchCriteria($criteria);
         $collection = $this->objectFactory->create()->getCollection();
-        foreach ($criteria->getFilterGroups() as $filterGroup) {
-            foreach ($filterGroup->getFilters() as $filter) {
+        foreach ($criteria->getFilterGroups() as $filterGroup)
+        {
+            foreach ($filterGroup->getFilters() as $filter)
+            {
                 $condition = $filter->getConditionType() ?: 'eq';
                 $collection->addFieldToFilter($filter->getField(), [$condition => $filter->getValue()]);
             }
@@ -234,8 +251,10 @@ class SettingsRepository implements SettingsRepositoryInterface
 
         $searchResults->setTotalCount($collection->getSize());
         $sortOrdersData = $criteria->getSortOrders();
-        if ($sortOrdersData) {
-            foreach ($sortOrdersData as $sortOrder) {
+        if ($sortOrdersData)
+        {
+            foreach ($sortOrdersData as $sortOrder)
+            {
                 $collection->addOrder(
                     $sortOrder->getField(),
                     ($sortOrder->getDirection() == SortOrder::SORT_ASC) ? 'ASC' : 'DESC'

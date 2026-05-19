@@ -120,8 +120,7 @@ class Documents
         ManagerInterface $messageManager,
         DocumentsRepository $documentsRepository,
         ScopeConfigInterface $scopeConfig
-    )
-    {
+    ) {
         $this->moloni = $moloni;
         $this->tools = $tools;
         $this->customers = $customers;
@@ -186,16 +185,19 @@ class Documents
     {
         $this->order = $this->orderRepository->get($orderId);
 
-        if (!$this->order instanceof OrderInterface) {
+        if (!$this->order instanceof OrderInterface)
+        {
             $this->addError(sprintf('Erro ao encontrar a encomenda com o id %s', $orderId));
             return false;
         }
 
         $this->parseDocument();
 
-        if ((int)$this->moloni->settings['shipping_document'] === 1) {
+        if ((int)$this->moloni->settings['shipping_document'] === 1)
+        {
             $shippingDocument = $this->createShippingDocument();
-            if (!$shippingDocument) {
+            if (!$shippingDocument)
+            {
                 $message = $this->moloni->errors->getErrors('first')['title'];
                 $message .= ' - ' . $this->moloni->errors->getErrors('first')['message'];
                 $this->addError($message);
@@ -204,7 +206,8 @@ class Documents
         }
 
         $result = $this->moloni->documents->setDocumentType()->insert($this->document);
-        if (!isset($result['document_id'])) {
+        if (!isset($result['document_id']))
+        {
             $message = $this->moloni->errors->getErrors('first')['title'];
             $message .= ' - ' . $this->moloni->errors->getErrors('first')['message'];
             $this->addError($message);
@@ -213,7 +216,8 @@ class Documents
 
         $hasValidTotals = $this->validateDocumentTotals($result['document_id'], $this->order);
 
-        if (!$hasValidTotals) {
+        if (!$hasValidTotals)
+        {
             $this->addComplexWarning(
                 "Documento inserido como rascunho mas os totais não batem certo",
                 [
@@ -223,10 +227,12 @@ class Documents
             );
         }
 
-        if ((int)$this->moloni->settings['document_status'] === 1 && $hasValidTotals) {
+        if ((int)$this->moloni->settings['document_status'] === 1 && $hasValidTotals)
+        {
             $update = ['document_id' => $result['document_id'], 'status' => 1];
 
-            if ($this->moloni->settings['document_email'] && !empty($this->order->getCustomerEmail())) {
+            if ($this->moloni->settings['document_email'] && !empty($this->order->getCustomerEmail()))
+            {
                 $update['send_email'][] = [
                     'email' => $this->order->getCustomerEmail(),
                     'name' => $this->order->getCustomerFirstname() . ' ' . $this->order->getCustomerLastname(),
@@ -261,12 +267,14 @@ class Documents
         // Add delivery datetime because its required
         $this->document['delivery_datetime'] = gmdate('Y-m-d H:i:s');
         $shippingDocumentInserted = $this->moloni->documents->setDocumentType('billsOfLading')->insert($this->document);
-        if (!$shippingDocumentInserted) {
+        if (!$shippingDocumentInserted)
+        {
             return false;
         }
 
         $validDocument = $this->validateDocumentTotals($shippingDocumentInserted['document_id'], $this->order);
-        if (!$validDocument) {
+        if (!$validDocument)
+        {
             $this->addComplexWarning(
                 "Documento de transporte inserido como rascunho mas os totais não batem certo",
                 [
@@ -282,7 +290,8 @@ class Documents
             'status' => 1
         ]);
 
-        if (!isset($closeDocument['document_id'])) {
+        if (!isset($closeDocument['document_id']))
+        {
             return false;
         }
 
@@ -317,18 +326,22 @@ class Documents
 
         $this->parseProducts();
 
-        if ($this->order->getBillingAddress() instanceof OrderAddressInterface) {
+        if ($this->order->getBillingAddress() instanceof OrderAddressInterface)
+        {
             $this->tools->getCountryIdByISO(
                 $this->order->getBillingAddress()->getCountryId()
             );
-        } else {
+        }
+        else
+        {
             $this->tools->getCountryIdByISO("PT");
         }
 
         $this->parseCurrency();
         $this->parsePaymentMethods();
 
-        if ($this->moloni->settings['shipping_details']) {
+        if ($this->moloni->settings['shipping_details'])
+        {
             $this->parseShippingDetails();
         }
 
@@ -338,21 +351,26 @@ class Documents
     private function parseProducts(): void
     {
         $products = $this->order->getItems();
-        if (is_array($products)) {
-            foreach ($products as $key => $product) {
-                if ($product->isDeleted() || $product->getParentItem()) {
+        if (is_array($products))
+        {
+            foreach ($products as $key => $product)
+            {
+                if ($product->isDeleted() || $product->getParentItem())
+                {
                     continue;
                 }
 
                 // Skip the child products of an order
                 $documentProduct = $this->products->create()->setProductFromOrder($product, $this->order);
-                if ($documentProduct && is_array($documentProduct)) {
+                if ($documentProduct && is_array($documentProduct))
+                {
                     $this->document['products'][] = $documentProduct;
                 }
             }
         }
 
-        if ($this->order->getShippingAmount() > 0) {
+        if ($this->order->getShippingAmount() > 0)
+        {
             $this->document['products'][] = $this->products->create()->setShippingFromOrder($this->order);
         }
     }
@@ -362,7 +380,8 @@ class Documents
         $orderCurrencyCode = $this->order->getOrderCurrencyCode();
 
         // @todo decide what to do when a company is not portuguese
-        if ((int)$this->company['country_id'] === 1 && $orderCurrencyCode !== 'EUR') {
+        if ((int)$this->company['country_id'] === 1 && $orderCurrencyCode !== 'EUR')
+        {
             $rate = $this->currencyFactory->create()->load($orderCurrencyCode)->getAnyRate("EUR");
             $this->document['exchange_currency_id'] = 1; // EUR
             $this->document['exchange_rate'] = $rate;
@@ -375,9 +394,11 @@ class Documents
     private function parseShippingDetails(): void
     {
         $shippingDescription = $this->order->getShippingDescription();
-        if (!empty($shippingDescription)) {
+        if (!empty($shippingDescription))
+        {
             $deliveryMethodId = $this->handleDeliveryMethod($shippingDescription);
-            if ($deliveryMethodId) {
+            if ($deliveryMethodId)
+            {
                 $this->document['delivery_method_id'] = $deliveryMethodId;
             }
         }
@@ -391,18 +412,23 @@ class Documents
     private function parsePaymentMethods(): void
     {
         $orderPayment = $this->order->getPayment();
-        if ($orderPayment && (float)$orderPayment->getAmountPaid() > 0) {
+        if ($orderPayment && (float)$orderPayment->getAmountPaid() > 0)
+        {
             $paymentName = $orderPayment->getMethodInstance()->getTitle();
-            try {
+            try
+            {
                 $paymentMethodId = $this->handlePaymentMethod($paymentName);
-                if ($paymentMethodId) {
+                if ($paymentMethodId)
+                {
                     $this->document['payments'][] = [
                         'payment_method_id' => $paymentMethodId,
                         'value' => $orderPayment->getAmountPaid(),
                         'date' => gmdate('Y-m-d H:i:s')
                     ];
                 }
-            } catch (JsonException $e) {
+            }
+            catch (JsonException $e)
+            {
             }
         }
     }
@@ -411,35 +437,48 @@ class Documents
     private function parseShippingDepartureAddress(): bool
     {
         if (isset($this->moloni->settings['delivery_departure_address']) &&
-            !empty($this->moloni->settings['delivery_departure_address'])) {
+         !empty($this->moloni->settings['delivery_departure_address']))
+        {
             $this->document['delivery_departure_address'] = $this->moloni->settings['delivery_departure_address'];
-        } else {
+        }
+        else
+        {
             $this->document['delivery_departure_address'] = $this->company['address'];
         }
 
         if (isset($this->moloni->settings['delivery_departure_city']) &&
-            !empty($this->moloni->settings['delivery_departure_city'])) {
+         !empty($this->moloni->settings['delivery_departure_city']))
+        {
             $this->document['delivery_departure_city'] = $this->moloni->settings['delivery_departure_city'];
-        } else {
+        }
+        else
+        {
             $this->document['delivery_departure_city'] = $this->company['city'];
         }
 
         if (isset($this->moloni->settings['delivery_departure_zip_code']) &&
-            !empty($this->moloni->settings['delivery_departure_zip_code'])) {
+         !empty($this->moloni->settings['delivery_departure_zip_code']))
+        {
             $this->document['delivery_departure_zip_code'] = $this->moloni->settings['delivery_departure_zip_code'];
-        } else {
+        }
+        else
+        {
             $this->document['delivery_departure_zip_code'] = $this->company['zip_code'];
         }
 
         if (isset($this->moloni->settings['delivery_departure_country']) &&
-            !empty($this->moloni->settings['delivery_departure_country'])) {
+         !empty($this->moloni->settings['delivery_departure_country']))
+        {
             $this->document['delivery_departure_country'] = $this->moloni->settings['delivery_departure_country'];
-        } else {
+        }
+        else
+        {
             $this->document['delivery_departure_country'] = $this->company['country_id'];
         }
 
         // If the delivery departure country is Portugal check if the vat is valid
-        if ((int)$this->document['delivery_departure_country'] === 1) {
+        if ((int)$this->document['delivery_departure_country'] === 1)
+        {
             $checkZipCode = $this->tools->zipCheck($this->document['delivery_departure_zip_code']);
             $this->document['delivery_departure_zip_code'] = $checkZipCode;
         }
@@ -453,9 +492,11 @@ class Documents
     private function parseShippingDestinationAddress(): bool
     {
         $shippingAddress = $this->order->getShippingAddress();
-        if ($shippingAddress) {
+        if ($shippingAddress)
+        {
             $street = $shippingAddress->getStreet();
-            if ($street && is_array($street)) {
+            if ($street && is_array($street))
+            {
                 $this->document['delivery_destination_address'] = implode(' ', $street);
             }
 
@@ -467,7 +508,8 @@ class Documents
             $this->document['delivery_destination_country'] = $countryId;
 
             if ((int)$this->document['delivery_destination_country'] === 1 &&
-                !empty($this->document['delivery_destination_zip_code'])) {
+             !empty($this->document['delivery_destination_zip_code']))
+            {
                 $checkZipCode = $this->tools->zipCheck($this->document['delivery_destination_zip_code']);
                 $this->document['delivery_destination_zip_code'] = $checkZipCode;
             }
@@ -487,14 +529,18 @@ class Documents
     {
         $deliveryMethodId = false;
 
-        if (empty($name)) {
+        if (empty($name))
+        {
             return false;
         }
 
         $deliveryMethods = $this->moloni->deliveryMethods->getAll();
-        if (!empty($deliveryMethods) && is_array($deliveryMethods)) {
-            foreach ($deliveryMethods as $deliveryMethod) {
-                if (mb_strtolower($name) === mb_strtolower($deliveryMethod['name'])) {
+        if (!empty($deliveryMethods) && is_array($deliveryMethods))
+        {
+            foreach ($deliveryMethods as $deliveryMethod)
+            {
+                if (mb_strtolower($name) === mb_strtolower($deliveryMethod['name']))
+                {
                     $deliveryMethodId = $deliveryMethod['delivery_method_id'];
                     break;
                 }
@@ -502,9 +548,11 @@ class Documents
         }
 
         // If the delivery method does not exist try to insert
-        if (!$deliveryMethodId) {
+        if (!$deliveryMethodId)
+        {
             $insert = $this->moloni->deliveryMethods->insert(['name' => $name]);
-            if (isset($insert['delivery_method_id'])) {
+            if (isset($insert['delivery_method_id']))
+            {
                 $deliveryMethodId = $insert['delivery_method_id'];
             }
         }
@@ -521,14 +569,18 @@ class Documents
     {
         $paymentMethodId = false;
 
-        if (empty($name)) {
+        if (empty($name))
+        {
             return false;
         }
 
         $paymentMethods = $this->moloni->paymentMethods->getAll();
-        if (!empty($paymentMethods) && is_array($paymentMethods)) {
-            foreach ($paymentMethods as $paymentMethod) {
-                if (mb_strtolower($name) === mb_strtolower($paymentMethod['name'])) {
+        if (!empty($paymentMethods) && is_array($paymentMethods))
+        {
+            foreach ($paymentMethods as $paymentMethod)
+            {
+                if (mb_strtolower($name) === mb_strtolower($paymentMethod['name']))
+                {
                     $paymentMethodId = $paymentMethod['payment_method_id'];
                     break;
                 }
@@ -536,9 +588,11 @@ class Documents
         }
 
         // If the payment method does not exist try to insert
-        if (!$paymentMethodId) {
+        if (!$paymentMethodId)
+        {
             $insert = $this->moloni->paymentMethods->insert(['name' => $name]);
-            if (isset($insert['payment_method_id'])) {
+            if (isset($insert['payment_method_id']))
+            {
                 $paymentMethodId = $insert['payment_method_id'];
             }
         }
@@ -579,7 +633,8 @@ class Documents
     {
         $moloniDocument = $this->moloni->documents->getOne(["document_id" => $documentId]);
 
-        if (!isset($moloniDocument['net_value'])) {
+        if (!isset($moloniDocument['net_value']))
+        {
             return false;
         }
 
@@ -595,10 +650,14 @@ class Documents
      */
     public function throwMessages(): void
     {
-        if (!empty($this->messages)) {
-            foreach ($this->messages as $type => $list) {
-                foreach ($list as $message) {
-                    switch ($type) {
+        if (!empty($this->messages))
+        {
+            foreach ($this->messages as $type => $list)
+            {
+                foreach ($list as $message)
+                {
+                    switch ($type)
+                    {
                         case 'complex_success':
                             $this->messageManager->addComplexSuccessMessage('createDocumentSuccessMessage', $message);
                             break;

@@ -35,12 +35,14 @@ class Documents
      */
     public function setDocumentType($documentType = false): Documents
     {
-        if (!$documentType) {
+        if (!$documentType)
+        {
             $documentType = $this->moloni->settings['document_type'];
         }
 
 
-        switch ($documentType) {
+        switch ($documentType)
+        {
             case 'documents':
             case '-1':
                 $this->documentTypeId = -1;
@@ -161,7 +163,8 @@ class Documents
     {
         $values['company_id'] = ($companyId ?: $this->moloni->session->companyId);
         $result = $this->moloni->execute("documents/getPdfLink", $values);
-        if (is_array($result) && isset($result['url'])) {
+        if (is_array($result) && isset($result['url']))
+        {
             return $result['url'];
         }
 
@@ -183,7 +186,8 @@ class Documents
         $values["company_id"] = $companyId ?: $this->moloni->session->companyId;
 
         $result = $this->moloni->execute($this->documentTypeClass . "/getAll", $values);
-        if (is_array($result) && isset($result[0]['document_id'])) {
+        if (is_array($result) && isset($result[0]['document_id']))
+        {
             return $result;
         }
 
@@ -197,11 +201,13 @@ class Documents
 
     public function getOne($values, $companyId = false)
     {
-        if (!isset($values['document_id'])) {
+        if (!isset($values['document_id']))
+        {
             return false;
         }
 
-        if (isset($this->store[$values['document_id']])) {
+        if (isset($this->store[$values['document_id']]))
+        {
             return $this->store[$values['document_id']];
         }
 
@@ -210,7 +216,8 @@ class Documents
 
         $this->store[$values['document_id']] = $result;
 
-        if (is_array($result) && isset($result['document_id'])) {
+        if (is_array($result) && isset($result['document_id']))
+        {
             return $result;
         }
 
@@ -233,7 +240,8 @@ class Documents
         $values['company_id'] = ($companyId ?: $this->moloni->session->companyId);
         $result = $this->moloni->execute($this->documentTypeClass . "/insert", $values);
 
-        if (is_array($result) && isset($result['document_id'])) {
+        if (is_array($result) && isset($result['document_id']))
+        {
             return $result;
         }
 
@@ -255,7 +263,8 @@ class Documents
         $values['company_id'] = ($companyId ?: $this->moloni->session->companyId);
         $result = $this->moloni->execute($this->documentTypeClass . "/update", $values);
 
-        if (is_array($result) && isset($result['document_id'])) {
+        if (is_array($result) && isset($result['document_id']))
+        {
             return $result;
         }
 
@@ -271,7 +280,8 @@ class Documents
     {
         $message = $this->searchErrorMessage($result);
 
-        switch ($message) {
+        switch ($message)
+        {
             case "Field 'exemption_reason' is required":
                 $message = __("Razão de isenção não definida. Verifique as taxas dos artigos ou a razão de isenção");
                 break;
@@ -282,12 +292,15 @@ class Documents
 
     private function searchErrorMessage($result): string
     {
-        if (isset($result['description'])) {
+        if (isset($result['description']))
+        {
             return $result['description'];
         }
 
-        if (is_array($result)) {
-            foreach ($result as $item) {
+        if (is_array($result))
+        {
+            foreach ($result as $item)
+            {
                 return $item['description'] ?? $this->searchErrorMessage($item);
             }
         }
