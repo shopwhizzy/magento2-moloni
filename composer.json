@@ -2,9 +2,13 @@
     "name": "moloni/magento2",
     "description": "Module for Magento 2 by Moloni",
     "type": "magento2-module",
-    "version": "1.3.9",
+    "version": "1.4.0",
     "license": "GPL-3.0",
     "authors": [
+        {
+            "email": "info@shopwhizzy.com",
+            "name": "ShopWhizzy"
+        },
         {
             "email": "apoio@moloni.com",
             "name": "Moloni, lda"
@@ -12,12 +16,14 @@
     ],
     "config": {
         "platform": {
-            "php": "8.0"
+            "php": "^8.1 || ^8.2 || ^8.3"
         }
     },
     "minimum-stability": "dev",
     "require": {
-        "ext-json": "*"
+        "ext-json": "*",
+        "php": "^8.1 || ^8.2 || ^8.3",
+        "magento/framework": "^103.0"
     },
     "autoload": {
         "files": [
