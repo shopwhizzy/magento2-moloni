@@ -1,8 +1,29 @@
 <?php
-/* Moloni
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * Module for Magento 2 by Moloni
+ * Copyright (C) 2026  Moloni, lda
+ *
+ * This file is part of Invoicing/Moloni.
+ *
+ * Invoicing/Moloni is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * Supporting the latest Adobe Commerce 2.4.7, 2.4.8 and 2.4.9 versions
+ *
+ * @link    https://shopwhizzy.com
+ * @author  info@shopwhizzy.com
  */
 
 namespace Invoicing\Moloni\Libraries\MoloniLibrary\Dependencies;
@@ -82,7 +103,7 @@ class ApiSession implements MoloniApiSessionRepositoryInterface
                 return $this->errors->throwError(
                     __('Erro de autenticação'),
                     __('Ocorreu um erro durante a operação de autenticação<br>' . $response->error),
-                    $authorizationUrl,
+                    $this->redactSecrets($authorizationUrl),
                     $response
                 );
             }
@@ -98,6 +119,20 @@ class ApiSession implements MoloniApiSessionRepositoryInterface
         }
 
         return false;
+    }
+
+    /**
+     * Strips client_secret/refresh_token/code values before a grant/refresh URL is kept around
+     * for error diagnostics (ApiErrors::$error_log, held for the request), since those diagnostics
+     * are only ever meant to show which endpoint failed, not to carry the live credentials.
+     */
+    private function redactSecrets(string $url): string
+    {
+        return preg_replace(
+            '/(client_secret|refresh_token|code)=[^&]+/',
+            '$1=***REDACTED***',
+            $url
+        );
     }
 
     /**
@@ -178,7 +213,7 @@ class ApiSession implements MoloniApiSessionRepositoryInterface
                 return $this->errors->throwError(
                     __('Erro de autenticação'),
                     __('Ocorreu um erro ao refrescar as chaves de sessão'),
-                    $refreshUrl,
+                    $this->redactSecrets($refreshUrl),
                     $response
                 );
             }

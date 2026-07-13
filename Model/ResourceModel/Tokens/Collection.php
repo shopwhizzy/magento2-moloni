@@ -1,13 +1,42 @@
 <?php
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * Module for Magento 2 by Moloni
+ * Copyright (C) 2026  Moloni, lda
+ *
+ * This file is part of Invoicing/Moloni.
+ *
+ * Invoicing/Moloni is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * Supporting the latest Adobe Commerce 2.4.7, 2.4.8 and 2.4.9 versions
+ *
+ * @link    https://shopwhizzy.com
+ * @author  info@shopwhizzy.com
  */
 
 namespace Invoicing\Moloni\Model\ResourceModel\Tokens;
 
+use Magento\Framework\DB\Adapter\AdapterInterface;
+use Magento\Framework\Encryption\EncryptorInterface;
+use Magento\Framework\Model\ResourceModel\Db\AbstractDb;
 use Magento\Framework\Model\ResourceModel\Db\Collection\AbstractCollection;
+use Magento\Framework\Data\Collection\EntityFactoryInterface;
+use Psr\Log\LoggerInterface;
+use Magento\Framework\Data\Collection\Db\FetchStrategyInterface;
+use Magento\Framework\Event\ManagerInterface;
+use Invoicing\Moloni\Model\ResourceModel\Tokens as TokensResource;
 
 class Collection extends AbstractCollection
 {
@@ -27,6 +56,21 @@ class Collection extends AbstractCollection
      */
     protected $_eventObject = 'tokens_collection';
 
+    private EncryptorInterface $encryptor;
+
+    public function __construct(
+        EntityFactoryInterface $entityFactory,
+        LoggerInterface $logger,
+        FetchStrategyInterface $fetchStrategy,
+        ManagerInterface $eventManager,
+        EncryptorInterface $encryptor,
+        ?AdapterInterface $connection = null,
+        ?AbstractDb $resource = null
+    ) {
+        parent::__construct($entityFactory, $logger, $fetchStrategy, $eventManager, $connection, $resource);
+        $this->encryptor = $encryptor;
+    }
+
     /**
      * Define resource model
      *
@@ -36,5 +80,25 @@ class Collection extends AbstractCollection
     protected function _construct()
     {
         $this->_init('Invoicing\Moloni\Model\Tokens', 'Invoicing\Moloni\Model\ResourceModel\Tokens');
+    }
+
+    /**
+     * Decrypt OAuth credential fields loaded via the raw collection query,
+     * which bypasses the resource model's own _afterLoad().
+     *
+     * @return $this
+     */
+    protected function _afterLoad()
+    {
+        foreach ($this->_items as $item) {
+            foreach (TokensResource::ENCRYPTED_FIELDS as $field) {
+                $value = $item->getData($field);
+                if ($value !== null && $value !== '' && TokensResource::looksEncrypted((string)$value)) {
+                    $item->setData($field, $this->encryptor->decrypt((string)$value));
+                }
+            }
+        }
+
+        return parent::_afterLoad();
     }
 }

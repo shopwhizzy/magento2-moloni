@@ -1,8 +1,29 @@
 <?php
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * Module for Magento 2 by Moloni
+ * Copyright (C) 2026  Moloni, lda
+ *
+ * This file is part of Invoicing/Moloni.
+ *
+ * Invoicing/Moloni is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * Supporting the latest Adobe Commerce 2.4.7, 2.4.8 and 2.4.9 versions
+ *
+ * @link    https://shopwhizzy.com
+ * @author  info@shopwhizzy.com
  */
 
 namespace Invoicing\Moloni\Libraries\MoloniLibrary;
@@ -209,6 +230,11 @@ class Moloni implements MoloniApiRepositoryInterface
                 $activeTokens
                     ->setCompanyId($setCompanyId)
                     ->save();
+
+                // save() mutates $activeTokens' encrypted fields in place (plaintext -> ciphertext).
+                // Force a fresh DB load so isValidSession() below reads back decrypted values,
+                // instead of reusing this same in-memory, now-encrypted object.
+                $this->tokensRepository->getTokens(true);
             }
 
             if ($this->session->isValidSession())
@@ -305,7 +331,7 @@ class Moloni implements MoloniApiRepositoryInterface
         }
 
         $this->logs[] = [
-            'url' => $requestUrl,
+            'url' => $this->redactAccessToken($requestUrl),
             'sent' => $body,
             'received' => $response
         ];
@@ -313,6 +339,15 @@ class Moloni implements MoloniApiRepositoryInterface
         $this->dataPersistor->set("moloni_logs", $this->logs);
 
         return $response;
+    }
+
+    /**
+     * The admin debug console (Block\Adminhtml\Console\Log) surfaces this log verbatim,
+     * so the live access_token must never be persisted in it.
+     */
+    private function redactAccessToken(string $url): string
+    {
+        return preg_replace('/(access_token=)[^&]+/', '$1***REDACTED***', $url);
     }
 
     /**

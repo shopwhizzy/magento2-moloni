@@ -1,7 +1,7 @@
 <?php
 /**
  * Module for Magento 2 by Moloni
- * Copyright (C) 2017  Moloni, lda
+ * Copyright (C) 2026  Moloni, lda
  *
  * This file is part of Invoicing/Moloni.
  *
@@ -17,6 +17,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * Supporting the latest Adobe Commerce 2.4.7, 2.4.8 and 2.4.9 versions
+ *
+ * @link    https://shopwhizzy.com
+ * @author  info@shopwhizzy.com
  */
 
 namespace Invoicing\Moloni\Setup;
@@ -57,6 +64,35 @@ class UpgradeSchema implements UpgradeSchemaInterface
             }
 
             $this->installer->endSetup();
+        }
+
+        if (version_compare($context->getVersion(), "1.5.0", "<")) {
+            $setup->startSetup();
+            $this->widenTokenColumns($setup);
+            $setup->endSetup();
+        }
+    }
+
+    /**
+     * Encrypted values (base64 ciphertext + key/cipher version prefix) run longer than the
+     * plain-text tokens the varchar(255)-equivalent columns were sized for. Widen them to TEXT
+     * so encrypting tokens at rest (see Model\ResourceModel\Tokens) can't silently truncate them.
+     */
+    private function widenTokenColumns(SchemaSetupInterface $setup): void
+    {
+        $table = $setup->getTable('moloni_tokens');
+        $connection = $setup->getConnection();
+
+        foreach (['secret_token', 'access_token', 'refresh_token'] as $column) {
+            $connection->modifyColumn(
+                $table,
+                $column,
+                [
+                    'type' => Table::TYPE_TEXT,
+                    'length' => 65535,
+                    'nullable' => true,
+                ]
+            );
         }
     }
 
